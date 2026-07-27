@@ -99,9 +99,10 @@ func resourceAWSAccount() *schema.Resource {
 				},
 			},
 			"organizational_unit": {
-				Description: "Name of the Organizational Unit under which the account resides.",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description:  "Name of the Organizational Unit under which the account resides. For top-level OUs, use the OU name (e.g., 'Sandbox'). For nested OUs (level 2+), use the format 'OU_NAME (OU_ID)' (e.g., 'Sandbox (ou-xfe5-a8hb8ml8)').",
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validateOrganizationalUnit,
 			},
 			"tags": {
 				Description: "Key-value map of resource tags for the account.",
@@ -1069,4 +1070,38 @@ func keys(value map[string]interface{}) []string {
 	}
 
 	return keys
+}
+
+func validateOrganizationalUnit(v interface{}, k string) (ws []string, es []error) {
+	value := v.(string)
+
+	// Check if it's a nested OU format: "OU_NAME (OU_ID)"
+	if strings.Contains(value, " (") && strings.HasSuffix(value, ")") {
+		// Extract the OU_ID part
+		parts := strings.Split(value, " (")
+		if len(parts) != 2 {
+			es = append(es, fmt.Errorf("invalid OU format for %s: must be 'OU_NAME (OU_ID)' for nested OUs", k))
+			return
+		}
+		ouId := strings.TrimSuffix(parts[1], ")")
+		// Validate OU ID format: ou-[0-9a-z]{4,32}-[a-z0-9]{8,32}
+		if !regexp.MustCompile(`^ou-[0-9a-z]{4,32}-[a-z0-9]{8,32}$`).MatchString(ouId) {
+			es = append(es, fmt.Errorf("invalid OU ID format for %s: must match 'ou-[0-9a-z]{4,32}-[a-z0-9]{8,32}'", k))
+			return
+		}
+		// Validate OU name part
+		ouName := parts[0]
+		if !regexp.MustCompile(`^[a-zA-Z0-9._- ]+$`).MatchString(ouName) {
+			es = append(es, fmt.Errorf("invalid OU name for %s: must contain only alphanumeric characters, dots, underscores, hyphens, and spaces", k))
+			return
+		}
+	} else {
+		// Top-level OU: just validate the name
+		if !regexp.MustCompile(`^[a-zA-Z0-9._- ]+$`).MatchString(value) {
+			es = append(es, fmt.Errorf("invalid OU name for %s: must contain only alphanumeric characters, dots, underscores, hyphens, and spaces", k))
+			return
+		}
+	}
+
+	return
 }

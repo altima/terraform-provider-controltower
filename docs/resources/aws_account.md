@@ -56,7 +56,7 @@ resource "controltower_aws_account" "account" {
 
 - `email` (String) Root email of the account.
 - `name` (String) Name of the account.
-- `organizational_unit` (String) Name of the Organizational Unit under which the account resides.
+- `organizational_unit` (String) Name of the Organizational Unit under which the account resides. For top-level OUs, use the OU name (e.g., 'Sandbox'). For nested OUs (level 2+), use the format 'OU_NAME (OU_ID)' (e.g., 'Sandbox (ou-xfe5-a8hb8ml8)').
 - `sso` (Block List, Min: 1, Max: 1) Assigned SSO user settings. (see [below for nested schema](#nestedblock--sso))
 
 ### Optional
